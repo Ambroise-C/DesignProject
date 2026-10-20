@@ -10,6 +10,17 @@ const props = defineProps({
 
 const emit = defineEmits(['add', 'remove', 'toggle-read', 'toggle-favorite'])
 const coverUnavailable = ref(false)
+const bookRoute = () => ({
+  name: 'review',
+  query: {
+    id: props.book.id,
+    title: props.book.title,
+    author: props.book.author,
+    year: props.book.year,
+    cover: props.book.cover,
+    subjects: props.book.subjects?.slice(0, 6).join('|'),
+  },
+})
 
 watch(
   () => props.book.cover,
@@ -34,10 +45,7 @@ watch(
       </div>
       <RouterLink
         class="cover-link"
-        :to="{
-          name: 'review',
-          query: { id: book.id, title: book.title, author: book.author, year: book.year, cover: book.cover },
-        }"
+        :to="bookRoute()"
         :aria-label="`Review ${book.title}`"
       />
       <button
@@ -56,10 +64,7 @@ watch(
       <p class="book-year">{{ book.year || 'Year unknown' }}</p>
       <h3 :title="book.title">
         <RouterLink
-          :to="{
-            name: 'review',
-            query: { id: book.id, title: book.title, author: book.author, year: book.year, cover: book.cover },
-          }"
+          :to="bookRoute()"
         >{{ book.title }}</RouterLink>
       </h3>
       <p class="book-author">{{ book.author || 'Author unknown' }}</p>
@@ -74,7 +79,7 @@ watch(
         <span>{{ inLibrary ? '✓' : '+' }}</span>
         {{ inLibrary ? 'In your library' : 'Add to library' }}
       </button>
-      <div v-else class="card-actions">
+      <div v-else-if="actions" class="card-actions">
         <button
           class="button button-read"
           :class="{ 'is-read': book.read }"

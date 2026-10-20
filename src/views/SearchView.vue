@@ -37,7 +37,7 @@ async function searchBooks(searchTerm = query.value) {
     const params = new URLSearchParams({
       q: normalizedQuery,
       limit: '12',
-      fields: 'key,title,author_name,first_publish_year,cover_i',
+      fields: 'key,title,author_name,first_publish_year,cover_i,subject',
     })
     const response = await fetch(`https://openlibrary.org/search.json?${params}`, {
       signal: requestController.signal,
@@ -58,6 +58,7 @@ async function searchBooks(searchTerm = query.value) {
         cover: book.cover_i
           ? `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg?default=false`
           : '',
+        subjects: Array.isArray(book.subject) ? book.subject.slice(0, 12) : [],
       }))
   } catch (error) {
     if (error.name !== 'AbortError') {

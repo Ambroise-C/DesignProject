@@ -1083,6 +1083,34 @@ main {
   font-size: 11px;
 }
 
+.recommendations-section {
+  padding-bottom: 52px;
+}
+
+.recommendations-section .section-heading {
+  margin: 0 0 17px;
+}
+
+.recommendations-section .section-heading h2 {
+  margin: 0;
+  color: #33372d;
+  font-family: 'Libre Baskerville', Georgia, serif;
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: -0.4px;
+}
+
+.recommendation-reason {
+  min-height: 18px;
+  margin: 0 0 5px;
+  color: #777c6d;
+  font-size: 8px;
+}
+
+.recommendation-card .book-cover {
+  aspect-ratio: 0.83;
+}
+
 @media (max-width: 480px) {
   .login-page {
     min-height: calc(100vh - 83px);
@@ -1107,5 +1135,9 @@ main {
 
   .review-details .eyebrow {
     justify-content: center;
+  }
+
+  .recommendations-section .section-heading h2 {
+    font-size: 16px;
   }
 }

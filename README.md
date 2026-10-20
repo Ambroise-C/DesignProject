@@ -9,6 +9,7 @@ L’interface s’inspire de la maquette Figma fournie : fond couleur papier, ty
 - Recherche de livres par titre, auteur ou mot-clé.
 - Affichage des couvertures, titres, auteurs et années de publication.
 - Consultation d’une fiche livre sans compte.
+- Recommandations basées sur l’auteur et les sujets associés, en excluant le titre consulté.
 - Création de compte et connexion locale.
 - Ajout et suppression de livres dans sa bibliothèque.
 - Marquage des livres comme lus ou non lus.
