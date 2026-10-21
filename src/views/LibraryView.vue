@@ -105,10 +105,10 @@ watch([searchQuery, readFilter, sortBy], () => {
         Load more
       </button>
     </div>
-    <div v-else-if="books.length && !filteredBooks.length" class="state-message">
+    <div v-if="books.length && !filteredBooks.length" class="state-message">
       No results found.
     </div>
-    <div v-else class="empty-state">
+    <div v-if="!books.length" class="empty-state">
       <div class="empty-icon" aria-hidden="true">▤</div>
       <h2>Your shelf is still a blank page.</h2>
       <p>Add first one to library</p>
