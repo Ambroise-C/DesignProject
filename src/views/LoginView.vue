@@ -31,9 +31,8 @@ async function submitLogin() {
 <template>
   <section class="login-page">
     <div class="login-card">
-      <p class="eyebrow">FIELDNOTES · VOTRE BIBLIOTHÈQUE</p>
+      <p class="eyebrow">CAMPERS · VOTRE BIBLIOTHÈQUE</p>
       <h1>{{ isRegistering ? 'Créer un compte' : 'Log in' }}</h1>
-      <p class="login-caption">Connectez-vous pour retrouver vos livres enregistrés.</p>
 
       <form class="login-form" @submit.prevent="submitLogin">
         <label for="login-username">Nom d’utilisateur</label>
@@ -73,10 +72,6 @@ async function submitLogin() {
         Compte de démonstration : <strong>test</strong> · mot de passe : <strong>test</strong>
       </p>
       <RouterLink class="guest-link" to="/">Continuer sans compte</RouterLink>
-      <p class="local-auth-note">
-        Comptes et mots de passe enregistrés uniquement dans ce navigateur. Ce mode local ne protège
-        pas des utilisateurs de l’appareil.
-      </p>
     </div>
   </section>
 </template>

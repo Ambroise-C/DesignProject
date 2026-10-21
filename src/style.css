@@ -79,15 +79,11 @@ button {
   letter-spacing: -0.6px;
 }
 
-.brand-mark {
-  width: 23px;
-  height: 23px;
-  display: grid;
-  place-items: center;
-  border: 1px solid #c5cbb4;
-  border-radius: 2px;
-  color: #667955;
-  font-size: 13px;
+.brand-logo {
+  width: 34px;
+  height: 26px;
+  display: block;
+  object-fit: contain;
 }
 
 .main-nav {
@@ -121,18 +117,6 @@ button {
   height: 2px;
   background: var(--green);
   content: '';
-}
-
-.nav-count {
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #e2e5d6;
-  color: #3b5946;
-  font-size: 8px;
 }
 
 .account-label {
@@ -400,6 +384,92 @@ main {
   white-space: nowrap;
 }
 
+.book-personal-details {
+  margin-top: 11px;
+  display: grid;
+  gap: 6px;
+}
+
+.rating-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.personal-label {
+  color: #747568;
+  font-size: 8px;
+}
+
+.rating-stars {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.rating-star {
+  padding: 0 1px;
+  border: 0;
+  background: transparent;
+  color: #c9c5b6;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.rating-star.is-selected {
+  color: #a57938;
+}
+
+.clear-rating {
+  margin-left: 4px;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: #858477;
+  cursor: pointer;
+  font-size: 7px;
+}
+
+.book-note {
+  width: 100%;
+  min-height: 52px;
+  padding: 6px;
+  resize: vertical;
+  border: 1px solid #d5d1c4;
+  border-radius: 0;
+  background: #faf8f0;
+  color: var(--ink);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.book-note::placeholder {
+  color: #a19e91;
+}
+
+.note-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #99968a;
+  font-size: 7px;
+}
+
+.button-note {
+  min-height: 23px;
+  padding: 0 7px;
+  border-color: #b8c0ad;
+  background: transparent;
+  color: #4b6249;
+  font-size: 8px;
+}
+
+.button-note:disabled {
+  opacity: 0.55;
+}
+
 .button-add {
   min-height: 25px;
   margin-top: 7px;
@@ -638,49 +708,6 @@ main {
   min-height: 30px;
 }
 
-.favorites-page .collection-intro h1 em {
-  color: #946150;
-}
-
-.favorites-banner {
-  min-height: 66px;
-  margin-top: 20px;
-  padding: 12px 17px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  border: 1px solid #ded5c5;
-  background: #f1ece1;
-}
-
-.favorites-banner > span:first-child {
-  color: #9b6556;
-  font-size: 25px;
-}
-
-.favorites-banner p {
-  margin: 0;
-  color: #625b4f;
-  font-family: 'Libre Baskerville', Georgia, serif;
-  font-size: 12px;
-  font-style: italic;
-}
-
-.favorites-banner small {
-  margin-left: 5px;
-  color: #90887a;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 8px;
-  font-style: normal;
-}
-
-.favorite-total {
-  margin-left: auto;
-  color: #8d8170;
-  font-size: 7px;
-  letter-spacing: 0.8px;
-}
-
 .heart-icon {
   color: #9b6556;
 }
@@ -698,9 +725,18 @@ main {
 }
 
 .footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   color: #3f5542;
   font-family: 'Libre Baskerville', Georgia, serif;
   font-size: 9px;
+}
+
+.footer-brand img {
+  width: 22px;
+  height: 17px;
+  object-fit: contain;
 }
 
 .sr-only {
@@ -803,27 +839,6 @@ main {
     font-size: 9px;
   }
 
-  .favorites-banner {
-    align-items: flex-start;
-    gap: 8px;
-    padding: 11px;
-  }
-
-  .favorites-banner p {
-    font-size: 10px;
-    line-height: 1.5;
-  }
-
-  .favorites-banner small {
-    display: block;
-    margin: 3px 0 0;
-  }
-
-  .favorite-total {
-    padding-top: 3px;
-    white-space: nowrap;
-  }
-
   .site-footer {
     padding: 12px 18px;
     flex-wrap: wrap;
@@ -888,12 +903,6 @@ main {
   font-family: 'Libre Baskerville', Georgia, serif;
   font-size: 25px;
   font-weight: 400;
-}
-
-.login-caption {
-  margin: 7px 0 23px;
-  color: #858477;
-  font-size: 9px;
 }
 
 .login-card > .eyebrow {
@@ -964,14 +973,6 @@ main {
 
 .demo-credentials strong {
   color: #3c5142;
-}
-
-.local-auth-note {
-  max-width: 290px;
-  margin: 15px auto 0;
-  color: #969387;
-  font-size: 8px;
-  line-height: 1.6;
 }
 
 .guest-link {
@@ -1083,34 +1084,6 @@ main {
   font-size: 11px;
 }
 
-.recommendations-section {
-  padding-bottom: 52px;
-}
-
-.recommendations-section .section-heading {
-  margin: 0 0 17px;
-}
-
-.recommendations-section .section-heading h2 {
-  margin: 0;
-  color: #33372d;
-  font-family: 'Libre Baskerville', Georgia, serif;
-  font-size: 19px;
-  font-weight: 400;
-  letter-spacing: -0.4px;
-}
-
-.recommendation-reason {
-  min-height: 18px;
-  margin: 0 0 5px;
-  color: #777c6d;
-  font-size: 8px;
-}
-
-.recommendation-card .book-cover {
-  aspect-ratio: 0.83;
-}
-
 @media (max-width: 480px) {
   .login-page {
     min-height: calc(100vh - 83px);
@@ -1137,7 +1110,4 @@ main {
     justify-content: center;
   }
 
-  .recommendations-section .section-heading h2 {
-    font-size: 16px;
-  }
 }

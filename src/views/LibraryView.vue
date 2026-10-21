@@ -11,20 +11,16 @@ const readCount = computed(() => books.value.filter((book) => book.read).length)
 <template>
   <section class="collection-page page-wrap">
     <div class="collection-intro">
-      <p class="eyebrow"><span></span> YOUR PERSONAL COLLECTION</p>
       <h1>My <em>library.</em></h1>
-      <p>All the books you’ve gathered, in one happy place.</p>
     </div>
 
     <div class="collection-summary">
       <div><strong>{{ books.length.toString().padStart(2, '0') }}</strong><span>BOOKS COLLECTED</span></div>
       <div><strong>{{ readCount.toString().padStart(2, '0') }}</strong><span>BOOKS FINISHED</span></div>
-      <div class="summary-decoration" aria-hidden="true">A story<br />for every<br />season.</div>
     </div>
 
     <div class="section-heading">
       <div>
-        <p class="eyebrow">A COLLECTION IN THE MAKING</p>
         <h2>On your shelf</h2>
       </div>
       <span class="results-count">{{ books.length }} {{ books.length === 1 ? 'book' : 'books' }}</span>
@@ -39,12 +35,14 @@ const readCount = computed(() => books.value.filter((book) => book.read).length)
         @remove="store.dispatch('removeBook', $event)"
         @toggle-read="store.dispatch('toggleRead', $event)"
         @toggle-favorite="store.dispatch('toggleFavorite', $event)"
+        @set-rating="store.dispatch('setRating', $event)"
+        @save-note="store.dispatch('setNote', $event)"
       />
     </div>
     <div v-else class="empty-state">
       <div class="empty-icon" aria-hidden="true">▤</div>
       <h2>Your shelf is still a blank page.</h2>
-      <p>Find a book that speaks to you and add it to your library.</p>
+      <p>Add first one to library</p>
       <RouterLink class="button button-primary" to="/">Discover books <span aria-hidden="true">→</span></RouterLink>
     </div>
   </section>

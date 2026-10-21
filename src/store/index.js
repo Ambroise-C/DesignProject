@@ -7,6 +7,17 @@ const LEGACY_LIBRARY_KEY = 'booknook-library'
 const DEMO_SALT = 'fieldnotes-demo-account-salt'
 const DEMO_HASH = '3ad8b33d14946c9f76cd4e30df93d4a4c6061f478232c56112a3388aa0ffc594'
 const PBKDF2_ITERATIONS = 120_000
+const MAX_NOTE_LENGTH = 280
+
+function normalizeBook(book) {
+  return {
+    ...book,
+    rating: Number.isInteger(book.rating) && book.rating >= 1 && book.rating <= 5
+      ? book.rating
+      : null,
+    note: typeof book.note === 'string' ? book.note.slice(0, MAX_NOTE_LENGTH) : '',
+  }
+}
 
 function readStorage(key, fallback) {
   try {
@@ -52,6 +63,10 @@ function loadLibraries(accounts) {
   for (const account of accounts) {
     if (!Array.isArray(libraries[account.username])) {
       libraries[account.username] = []
+    } else {
+      libraries[account.username] = libraries[account.username]
+        .filter((book) => book && typeof book === 'object' && typeof book.id === 'string')
+        .map(normalizeBook)
     }
   }
 
@@ -151,7 +166,7 @@ const store = createStore({
     },
     addBook(state, book) {
       if (state.username && !state.library.some((item) => item.id === book.id)) {
-        state.library.push({ ...book, favorite: false, read: false })
+        state.library.push({ ...book, favorite: false, read: false, rating: null, note: '' })
         syncCurrentLibrary(state)
       }
     },
@@ -170,6 +185,20 @@ const store = createStore({
       const book = state.username && state.library.find((item) => item.id === id)
       if (book) book.favorite = !book.favorite
       syncCurrentLibrary(state)
+    },
+    setRating(state, { id, rating }) {
+      const book = state.username && state.library.find((item) => item.id === id)
+      if (book && (rating === null || (Number.isInteger(rating) && rating >= 1 && rating <= 5))) {
+        book.rating = rating
+        syncCurrentLibrary(state)
+      }
+    },
+    setNote(state, { id, note }) {
+      const book = state.username && state.library.find((item) => item.id === id)
+      if (book && typeof note === 'string' && note.length <= MAX_NOTE_LENGTH) {
+        book.note = note
+        syncCurrentLibrary(state)
+      }
     },
   },
   actions: {
@@ -214,6 +243,12 @@ const store = createStore({
     },
     toggleFavorite({ commit }, id) {
       commit('toggleFavorite', id)
+    },
+    setRating({ commit }, payload) {
+      commit('setRating', payload)
+    },
+    setNote({ commit }, payload) {
+      commit('setNote', payload)
     },
   },
 })

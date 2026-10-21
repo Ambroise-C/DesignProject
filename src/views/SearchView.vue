@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useStore } from 'vuex'
 import BookCard from '../components/BookCard.vue'
 
@@ -14,6 +14,21 @@ const notice = ref('')
 let activeRequest
 let noticeTimer
 
+function normalizeBooks(docs) {
+  return (Array.isArray(docs) ? docs : [])
+    .filter((book) => book.key && book.title)
+    .map((book) => ({
+      id: book.key,
+      title: book.title,
+      author: book.author_name?.[0] || '',
+      year: book.first_publish_year || null,
+      cover: book.cover_i
+        ? `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg?default=false`
+        : '',
+      subjects: Array.isArray(book.subject) ? book.subject.slice(0, 12) : [],
+    }))
+}
+
 const booksWithStatus = computed(() =>
   books.value.map((book) => ({
     ...book,
@@ -21,22 +36,17 @@ const booksWithStatus = computed(() =>
   })),
 )
 
-async function searchBooks(searchTerm = query.value) {
-  const normalizedQuery = searchTerm.trim()
-  if (!normalizedQuery) return
-
-  query.value = normalizedQuery
+async function loadBooks(searchTerm, limit, randomize = false) {
   activeRequest?.abort()
   const requestController = new AbortController()
   activeRequest = requestController
   loading.value = true
-  searched.value = true
   errorMessage.value = ''
 
   try {
     const params = new URLSearchParams({
-      q: normalizedQuery,
-      limit: '12',
+      q: searchTerm,
+      limit: String(limit),
       fields: 'key,title,author_name,first_publish_year,cover_i,subject',
     })
     const response = await fetch(`https://openlibrary.org/search.json?${params}`, {
@@ -48,18 +58,18 @@ async function searchBooks(searchTerm = query.value) {
     }
 
     const data = await response.json()
-    books.value = (data.docs || [])
-      .filter((book) => book.key && book.title)
-      .map((book) => ({
-        id: book.key,
-        title: book.title,
-        author: book.author_name?.[0] || '',
-        year: book.first_publish_year || null,
-        cover: book.cover_i
-          ? `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg?default=false`
-          : '',
-        subjects: Array.isArray(book.subject) ? book.subject.slice(0, 12) : [],
-      }))
+    const results = normalizeBooks(data.docs)
+
+    if (randomize) {
+      for (let index = results.length - 1; index > 0; index -= 1) {
+        const randomIndex = Math.floor(Math.random() * (index + 1))
+        const book = results[index]
+        results[index] = results[randomIndex]
+        results[randomIndex] = book
+      }
+    }
+
+    books.value = randomize ? results.slice(0, 20) : results
   } catch (error) {
     if (error.name !== 'AbortError') {
       errorMessage.value =
@@ -69,6 +79,21 @@ async function searchBooks(searchTerm = query.value) {
     if (!requestController.signal.aborted) loading.value = false
   }
 }
+
+function loadFeaturedBooks() {
+  return loadBooks('subject:fiction', 100, true)
+}
+
+function searchBooks(searchTerm = query.value) {
+  const normalizedQuery = searchTerm.trim()
+  if (!normalizedQuery) return
+
+  query.value = normalizedQuery
+  searched.value = true
+  return loadBooks(normalizedQuery, 12)
+}
+
+onMounted(loadFeaturedBooks)
 
 function addBook(book) {
   if (!isAuthenticated.value) return
@@ -99,14 +124,17 @@ onBeforeUnmount(() => {
         placeholder="Search books"
         autocomplete="off"
       />
-      <button class="button button-primary" type="submit" :disabled="loading || !query.trim()">
-        {{ loading ? 'Searching…' : 'Find a book' }}
+      <button
+        class="button button-primary"
+        type="submit"
+        :disabled="(searched && loading) || !query.trim()"
+      >
+        {{ searched && loading ? 'Searching…' : 'Find a book' }}
       </button>
     </form>
 
     <div class="section-heading results-heading">
       <div>
-        <p class="eyebrow">A PERSONAL BOOKSHELF</p>
         <h1>{{ searched ? 'Search results' : 'On the shelves' }}</h1>
       </div>
       <span v-if="books.length" class="results-count">{{ books.length }} {{ books.length === 1 ? 'book' : 'books' }}</span>
@@ -115,7 +143,11 @@ onBeforeUnmount(() => {
     <div v-if="errorMessage" class="state-message error-message" role="alert">
       <strong>We couldn’t reach the library.</strong>
       <span>{{ errorMessage }}</span>
-      <button class="text-button" type="button" @click="searchBooks()">Try again</button>
+      <button
+        class="text-button"
+        type="button"
+        @click="searched ? searchBooks() : loadFeaturedBooks()"
+      >Try again</button>
     </div>
     <div v-else-if="loading" class="state-message">Looking through the shelves…</div>
     <div v-else-if="books.length" class="book-grid">

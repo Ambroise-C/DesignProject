@@ -6,7 +6,6 @@ import { useStore } from 'vuex'
 const route = useRoute()
 const router = useRouter()
 const store = useStore()
-const libraryCount = computed(() => store.getters.libraryCount)
 const isAuthenticated = computed(() => store.getters.isAuthenticated)
 const username = computed(() => store.getters.username)
 
@@ -19,15 +18,15 @@ async function logout() {
 <template>
   <div class="app-shell">
     <header class="topbar">
-      <RouterLink class="brand" to="/" aria-label="Fieldnotes home">
-        <span class="brand-mark" aria-hidden="true">✳</span>
-        <span>fieldnotes</span>
+      <RouterLink class="brand" to="/" aria-label="Campers home">
+        <img class="brand-logo" src="/ressources/campers-logo.png" alt="" />
+        <span>Campers</span>
       </RouterLink>
 
       <nav v-if="!['login', 'review'].includes(route.name)" class="main-nav" aria-label="Main navigation">
         <RouterLink to="/" :class="{ active: route.name === 'search' }">Discover books</RouterLink>
         <RouterLink v-if="isAuthenticated" to="/library" :class="{ active: route.name === 'library' }">
-          My shelves <span v-if="libraryCount" class="nav-count">{{ libraryCount }}</span>
+          My shelves
         </RouterLink>
         <RouterLink v-if="isAuthenticated" to="/favorites" :class="{ active: route.name === 'favorites' }">Favorites</RouterLink>
         <RouterLink v-if="!isAuthenticated" to="/login" :class="{ active: route.name === 'login' }">Log in</RouterLink>
@@ -41,8 +40,10 @@ async function logout() {
     </main>
 
     <footer v-if="!['login', 'review'].includes(route.name)" class="site-footer">
-      <span class="footer-brand">fieldnotes</span>
-      <span>A quiet place to keep the books that stay with you.</span>
+      <span class="footer-brand">
+        <img src="/ressources/campers-logo.png" alt="" />
+        Campers
+      </span>
       <span>Book details from Open Library</span>
     </footer>
   </div>

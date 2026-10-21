@@ -8,8 +8,17 @@ const props = defineProps({
   actions: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['add', 'remove', 'toggle-read', 'toggle-favorite'])
+const emit = defineEmits([
+  'add',
+  'remove',
+  'toggle-read',
+  'toggle-favorite',
+  'set-rating',
+  'save-note',
+])
 const coverUnavailable = ref(false)
+const noteDraft = ref(props.book.note || '')
+const ratingOptions = [1, 2, 3, 4, 5]
 const bookRoute = () => ({
   name: 'review',
   query: {
@@ -18,7 +27,6 @@ const bookRoute = () => ({
     author: props.book.author,
     year: props.book.year,
     cover: props.book.cover,
-    subjects: props.book.subjects?.slice(0, 6).join('|'),
   },
 })
 
@@ -26,6 +34,13 @@ watch(
   () => props.book.cover,
   () => {
     coverUnavailable.value = false
+  },
+)
+
+watch(
+  () => [props.book.id, props.book.note],
+  () => {
+    noteDraft.value = props.book.note || ''
   },
 )
 </script>
@@ -68,6 +83,49 @@ watch(
         >{{ book.title }}</RouterLink>
       </h3>
       <p class="book-author">{{ book.author || 'Author unknown' }}</p>
+
+      <div v-if="actions" class="book-personal-details">
+        <div class="rating-control">
+          <span class="personal-label">Your rating</span>
+          <div class="rating-stars" role="group" :aria-label="`Rate ${book.title} from 1 to 5`">
+            <button
+              v-for="rating in ratingOptions"
+              :key="rating"
+              class="rating-star"
+              :class="{ 'is-selected': book.rating >= rating }"
+              type="button"
+              :aria-label="`${rating} out of 5 stars`"
+              :aria-pressed="book.rating === rating"
+              @click="emit('set-rating', { id: book.id, rating })"
+            >★</button>
+            <button
+              v-if="book.rating"
+              class="clear-rating"
+              type="button"
+              aria-label="Clear rating"
+              @click="emit('set-rating', { id: book.id, rating: null })"
+            >Clear</button>
+          </div>
+        </div>
+        <label class="personal-label" :for="`book-note-${book.id}`">Personal note</label>
+        <textarea
+          :id="`book-note-${book.id}`"
+          v-model="noteDraft"
+          class="book-note"
+          maxlength="280"
+          placeholder="Add a note about this book…"
+          rows="3"
+        />
+        <div class="note-footer">
+          <span>{{ noteDraft.length }}/280</span>
+          <button
+            class="button button-note"
+            type="button"
+            :disabled="noteDraft === (book.note || '')"
+            @click="emit('save-note', { id: book.id, note: noteDraft.trim() })"
+          >Save note</button>
+        </div>
+      </div>
 
       <button
         v-if="!actions && canAdd"
