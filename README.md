@@ -1,6 +1,6 @@
-# fieldnotes
+# Campers
 
-**fieldnotes** is a web application for discovering and organizing books. Users can search for books and view their details. After signing in, they can build a personal library and manage a list of favorites.
+**Campers** is a web application for discovering and organizing books. Users can search for books and view their details. After signing in, they can build a personal library and manage a list of favorites.
 
 The interface is inspired by the provided Figma design, with a paper-like background, serif typography, and a bookshelf-style book layout.
 
@@ -87,4 +87,4 @@ This authentication system is intended for demos and educational projects only. 
 
 Lilia is a young adult who loves reading all kinds of books. She especially enjoys reading at the library with an iced coffee. She likes discovering new genres, authors, and titles, but can get overwhelmed by all the options. She sometimes gets frustrated when she forgets a book she wanted to read or one she has already finished.
 
-We want to help Lilia feel at ease with **fieldnotes**, where she can keep track of everything she discovers and quickly find the books she is looking for.
+We want to help Lilia feel at ease with **Campers**, where she can keep track of everything she discovers and quickly find the books she is looking for.
