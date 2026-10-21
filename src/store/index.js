@@ -9,9 +9,10 @@ const DEMO_HASH = '3ad8b33d14946c9f76cd4e30df93d4a4c6061f478232c56112a3388aa0ffc
 const PBKDF2_ITERATIONS = 120_000
 const MAX_NOTE_LENGTH = 280
 
-function normalizeBook(book) {
+function normalizeBook(book, fallbackDateAdded) {
   return {
     ...book,
+    dateAdded: Number.isFinite(book.dateAdded) ? book.dateAdded : fallbackDateAdded,
     rating: Number.isInteger(book.rating) && book.rating >= 1 && book.rating <= 5
       ? book.rating
       : null,
@@ -66,7 +67,7 @@ function loadLibraries(accounts) {
     } else {
       libraries[account.username] = libraries[account.username]
         .filter((book) => book && typeof book === 'object' && typeof book.id === 'string')
-        .map(normalizeBook)
+        .map((book, index) => normalizeBook(book, index + 1))
     }
   }
 
@@ -166,7 +167,14 @@ const store = createStore({
     },
     addBook(state, book) {
       if (state.username && !state.library.some((item) => item.id === book.id)) {
-        state.library.push({ ...book, favorite: false, read: false, rating: null, note: '' })
+        state.library.push({
+          ...book,
+          dateAdded: Date.now(),
+          favorite: false,
+          read: false,
+          rating: null,
+          note: '',
+        })
         syncCurrentLibrary(state)
       }
     },

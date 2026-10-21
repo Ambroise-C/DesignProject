@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
@@ -9,9 +9,37 @@ const store = useStore()
 const isAuthenticated = computed(() => store.getters.isAuthenticated)
 const username = computed(() => store.getters.username)
 
+function loadTheme() {
+  try {
+    return localStorage.getItem('fieldnotes-theme') === 'dark' ? 'dark' : 'light'
+  } catch (error) {
+    console.error('Unable to restore the color theme:', error)
+    return 'light'
+  }
+}
+
+const theme = ref(loadTheme())
+
+watch(
+  theme,
+  (value) => {
+    document.documentElement.dataset.theme = value
+    try {
+      localStorage.setItem('fieldnotes-theme', value)
+    } catch (error) {
+      console.error('Unable to save the color theme:', error)
+    }
+  },
+  { immediate: true },
+)
+
 async function logout() {
   await store.dispatch('logout')
   await router.replace('/')
+}
+
+function toggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark'
 }
 </script>
 
@@ -23,16 +51,27 @@ async function logout() {
         <span>Campers</span>
       </RouterLink>
 
-      <nav v-if="!['login', 'review'].includes(route.name)" class="main-nav" aria-label="Main navigation">
-        <RouterLink to="/" :class="{ active: route.name === 'search' }">Discover books</RouterLink>
-        <RouterLink v-if="isAuthenticated" to="/library" :class="{ active: route.name === 'library' }">
-          My shelves
-        </RouterLink>
-        <RouterLink v-if="isAuthenticated" to="/favorites" :class="{ active: route.name === 'favorites' }">Favorites</RouterLink>
-        <RouterLink v-if="!isAuthenticated" to="/login" :class="{ active: route.name === 'login' }">Log in</RouterLink>
-        <span v-if="isAuthenticated" class="account-label">{{ username }}</span>
-        <button v-if="isAuthenticated" class="logout-button" type="button" @click="logout">Log out</button>
-      </nav>
+      <div class="topbar-controls">
+        <nav v-if="!['login', 'review'].includes(route.name)" class="main-nav" aria-label="Main navigation">
+          <RouterLink to="/" :class="{ active: route.name === 'search' }">Discover books</RouterLink>
+          <RouterLink v-if="isAuthenticated" to="/library" :class="{ active: route.name === 'library' }">
+            My shelves
+          </RouterLink>
+          <RouterLink v-if="isAuthenticated" to="/favorites" :class="{ active: route.name === 'favorites' }">Favorites</RouterLink>
+          <RouterLink v-if="!isAuthenticated" to="/login" :class="{ active: route.name === 'login' }">Log in</RouterLink>
+          <span v-if="isAuthenticated" class="account-label">{{ username }}</span>
+          <button v-if="isAuthenticated" class="logout-button" type="button" @click="logout">Log out</button>
+        </nav>
+        <button
+          class="theme-toggle"
+          type="button"
+          :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+          @click="toggleTheme"
+        >
+          <span aria-hidden="true">{{ theme === 'dark' ? '☀' : '☾' }}</span>
+          {{ theme === 'dark' ? 'Light mode' : 'Dark mode' }}
+        </button>
+      </div>
     </header>
 
     <main>

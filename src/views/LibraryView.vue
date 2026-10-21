@@ -1,11 +1,44 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useStore } from 'vuex'
 import BookCard from '../components/BookCard.vue'
 
 const store = useStore()
 const books = computed(() => store.getters.library)
+const searchQuery = ref('')
+const readFilter = ref('all')
+const sortBy = ref('date-added')
+const visibleCount = ref(12)
+const pageSize = 12
 const readCount = computed(() => books.value.filter((book) => book.read).length)
+const filteredBooks = computed(() => {
+  const normalizedQuery = searchQuery.value.trim().toLocaleLowerCase()
+
+  return books.value
+    .filter((book) => {
+      if (readFilter.value === 'read' && !book.read) return false
+      if (readFilter.value === 'to-read' && book.read) return false
+      if (!normalizedQuery) return true
+
+      return [book.title, book.author].some((value) =>
+        value?.toLocaleLowerCase().includes(normalizedQuery),
+      )
+    })
+    .sort((first, second) => {
+      if (sortBy.value === 'title') {
+        return (first.title || '').localeCompare(second.title || '')
+      }
+      if (sortBy.value === 'year') {
+        return (Number(first.year) || 0) - (Number(second.year) || 0)
+      }
+      return (second.dateAdded || 0) - (first.dateAdded || 0)
+    })
+})
+const visibleBooks = computed(() => filteredBooks.value.slice(0, visibleCount.value))
+
+watch([searchQuery, readFilter, sortBy], () => {
+  visibleCount.value = pageSize
+})
 </script>
 
 <template>
@@ -23,12 +56,40 @@ const readCount = computed(() => books.value.filter((book) => book.read).length)
       <div>
         <h2>On your shelf</h2>
       </div>
-      <span class="results-count">{{ books.length }} {{ books.length === 1 ? 'book' : 'books' }}</span>
+      <span class="results-count">{{ filteredBooks.length }} {{ filteredBooks.length === 1 ? 'book' : 'books' }}</span>
     </div>
 
-    <div v-if="books.length" class="book-grid">
+    <div v-if="books.length" class="search-filters shelf-filters">
+      <label class="filter-field shelf-search-field">
+        <span class="sr-only">Search your library</span>
+        <input
+          v-model="searchQuery"
+          type="search"
+          placeholder="Search your library"
+          aria-label="Search your library"
+        />
+      </label>
+      <label class="filter-field">
+        <span>Reading status</span>
+        <select v-model="readFilter" aria-label="Filter books by reading status">
+          <option value="all">All books</option>
+          <option value="read">Read</option>
+          <option value="to-read">To read</option>
+        </select>
+      </label>
+      <label class="filter-field">
+        <span>Sort by</span>
+        <select v-model="sortBy" aria-label="Sort books">
+          <option value="title">Title</option>
+          <option value="year">Year</option>
+          <option value="date-added">Date added</option>
+        </select>
+      </label>
+    </div>
+
+    <div v-if="visibleBooks.length" class="book-grid">
       <BookCard
-        v-for="book in books"
+        v-for="book in visibleBooks"
         :key="book.id"
         :book="book"
         actions
@@ -38,6 +99,14 @@ const readCount = computed(() => books.value.filter((book) => book.read).length)
         @set-rating="store.dispatch('setRating', $event)"
         @save-note="store.dispatch('setNote', $event)"
       />
+    </div>
+    <div v-if="filteredBooks.length > visibleCount" class="load-more-wrap">
+      <button class="button load-more-button" type="button" @click="visibleCount += pageSize">
+        Load more
+      </button>
+    </div>
+    <div v-else-if="books.length && !filteredBooks.length" class="state-message">
+      No results found.
     </div>
     <div v-else class="empty-state">
       <div class="empty-icon" aria-hidden="true">▤</div>

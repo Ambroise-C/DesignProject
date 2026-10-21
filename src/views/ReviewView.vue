@@ -1,11 +1,15 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
 const route = useRoute()
 const router = useRouter()
 const store = useStore()
+const averageRating = ref(null)
+const ratingCount = ref(0)
+const ratingLoading = ref(false)
+const ratingError = ref(false)
 
 const book = computed(() => {
   const id = typeof route.query.id === 'string' ? route.query.id : ''
@@ -27,6 +31,77 @@ const book = computed(() => {
 })
 const inLibrary = computed(() => book.value && store.getters.isInLibrary(book.value.id))
 const isAuthenticated = computed(() => store.getters.isAuthenticated)
+const returnTo = computed(() => {
+  const requestedPath = route.query.returnTo
+  return requestedPath === '/library' || requestedPath === '/favorites' ? requestedPath : '/'
+})
+const backLabel = computed(() => {
+  if (returnTo.value === '/library') return 'Back to my shelves'
+  if (returnTo.value === '/favorites') return 'Back to favorites'
+  return 'Back to discovery'
+})
+const personalRating = computed(() =>
+  Number.isInteger(book.value?.rating) && book.value.rating >= 1 && book.value.rating <= 5
+    ? book.value.rating
+    : null,
+)
+const displayAverageRating = computed(() => {
+  if (averageRating.value === null) return personalRating.value
+  if (personalRating.value === null) return averageRating.value
+
+  return (
+    (averageRating.value * ratingCount.value + personalRating.value) /
+    (ratingCount.value + 1)
+  )
+})
+const displayRatingCount = computed(
+  () => ratingCount.value + (personalRating.value === null ? 0 : 1),
+)
+
+watch(
+  () => book.value?.id,
+  async (id, _, onCleanup) => {
+    averageRating.value = null
+    ratingCount.value = 0
+    ratingLoading.value = false
+    ratingError.value = false
+    const workId = id?.match(/^\/works\/[A-Za-z0-9]+$/)?.[0]
+    if (!workId) return
+
+    const controller = new AbortController()
+    onCleanup(() => controller.abort())
+    ratingLoading.value = true
+
+    try {
+      const response = await fetch(`https://openlibrary.org${workId}/ratings.json`, {
+        signal: controller.signal,
+      })
+      if (!response.ok) {
+        throw new Error(`Open Library returned ${response.status}.`)
+      }
+
+      const data = await response.json()
+      if (
+        !Number.isFinite(data.summary?.average) ||
+        !Number.isFinite(data.summary?.count) ||
+        data.summary.count < 0
+      ) {
+        throw new Error('Open Library returned invalid rating data.')
+      }
+
+      averageRating.value = data.summary.average
+      ratingCount.value = data.summary.count
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        console.error('Unable to load the community rating:', error)
+        ratingError.value = true
+      }
+    } finally {
+      if (!controller.signal.aborted) ratingLoading.value = false
+    }
+  },
+  { immediate: true },
+)
 
 function addBook() {
   if (!book.value || !isAuthenticated.value) return
@@ -42,7 +117,7 @@ function removeBook() {
 
 <template>
   <section class="review-page page-wrap">
-    <RouterLink class="back-link" to="/">← &nbsp;Back to discovery</RouterLink>
+    <RouterLink class="back-link" :to="returnTo">← &nbsp;{{ backLabel }}</RouterLink>
 
     <div v-if="book" class="review-content">
       <div class="review-cover">
@@ -53,6 +128,24 @@ function removeBook() {
         <h1>{{ book.title }}</h1>
         <p class="review-author">{{ book.author || 'Author unknown' }}</p>
         <p v-if="book.year" class="review-year">First published {{ book.year }}</p>
+        <div class="community-rating" aria-live="polite">
+          <span class="community-rating-label">
+            {{ personalRating === null ? 'Average rating' : 'Average rating, including yours' }}
+          </span>
+          <span v-if="ratingLoading" class="community-rating-value">Loading…</span>
+          <span v-else-if="ratingError && personalRating === null" class="community-rating-value">
+            Rating unavailable
+          </span>
+          <span v-else-if="displayRatingCount" class="community-rating-value">
+            {{ displayAverageRating.toFixed(1) }} / 5 <span aria-hidden="true">★</span>
+            <span class="community-rating-count">
+              ({{ displayRatingCount.toLocaleString() }}
+              {{ displayRatingCount === 1 ? 'rating' : 'ratings' }}
+              <template v-if="ratingError">; community average unavailable</template>)
+            </span>
+          </span>
+          <span v-else class="community-rating-value">No ratings yet</span>
+        </div>
         <button
           v-if="isAuthenticated && !inLibrary"
           class="button button-primary review-primary"

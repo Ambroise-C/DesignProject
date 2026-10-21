@@ -6,6 +6,10 @@ import BookCard from '../components/BookCard.vue'
 const store = useStore()
 const isAuthenticated = computed(() => store.getters.isAuthenticated)
 const query = ref('')
+const language = ref('')
+const genre = ref('')
+const minimumRating = ref('')
+const hideReadBooks = ref(false)
 const books = ref([])
 const loading = ref(false)
 const searched = ref(false)
@@ -22,6 +26,7 @@ function normalizeBooks(docs) {
       title: book.title,
       author: book.author_name?.[0] || '',
       year: book.first_publish_year || null,
+      averageRating: Number.isFinite(book.ratings_average) ? book.ratings_average : null,
       cover: book.cover_i
         ? `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg?default=false`
         : '',
@@ -29,14 +34,63 @@ function normalizeBooks(docs) {
     }))
 }
 
-const booksWithStatus = computed(() =>
-  books.value.map((book) => ({
-    ...book,
-    inLibrary: store.getters.isInLibrary(book.id),
-  })),
-)
+async function localizeBooks(results, languageCode, signal) {
+  const localizedBooks = await Promise.all(
+    results.map(async (book) => {
+      const params = new URLSearchParams({
+        limit: '100',
+        fields: 'title,languages,covers,publish_date',
+      })
+      const response = await fetch(`https://openlibrary.org${book.id}/editions.json?${params}`, {
+        signal,
+      })
 
-async function loadBooks(searchTerm, limit, randomize = false) {
+      if (!response.ok) {
+        throw new Error(`Open Library returned ${response.status}. Please try again.`)
+      }
+
+      const data = await response.json()
+      const edition = data.entries?.find(
+        (item) =>
+          typeof item.title === 'string' &&
+          item.languages?.some((itemLanguage) => itemLanguage.key === `/languages/${languageCode}`),
+      )
+
+      if (!edition) return null
+
+      return {
+        ...book,
+        title: edition.title,
+        cover: edition.covers?.[0]
+          ? `https://covers.openlibrary.org/b/id/${edition.covers[0]}-M.jpg?default=false`
+          : book.cover,
+      }
+    }),
+  )
+
+  return localizedBooks.filter(Boolean)
+}
+
+const booksWithStatus = computed(() => {
+  const readBookIds = new Set(
+    store.getters.library.filter((book) => book.read).map((book) => book.id),
+  )
+
+  return books.value
+    .filter((book) => !hideReadBooks.value || !readBookIds.has(book.id))
+    .map((book) => ({
+      ...book,
+      inLibrary: store.getters.isInLibrary(book.id),
+    }))
+})
+
+async function loadBooks(
+  searchTerm,
+  limit,
+  randomize = false,
+  languageCode = '',
+  minRating = '',
+) {
   activeRequest?.abort()
   const requestController = new AbortController()
   activeRequest = requestController
@@ -47,7 +101,7 @@ async function loadBooks(searchTerm, limit, randomize = false) {
     const params = new URLSearchParams({
       q: searchTerm,
       limit: String(limit),
-      fields: 'key,title,author_name,first_publish_year,cover_i,subject',
+      fields: 'key,title,author_name,first_publish_year,cover_i,subject,ratings_average',
     })
     const response = await fetch(`https://openlibrary.org/search.json?${params}`, {
       signal: requestController.signal,
@@ -58,7 +112,17 @@ async function loadBooks(searchTerm, limit, randomize = false) {
     }
 
     const data = await response.json()
-    const results = normalizeBooks(data.docs)
+    let results = normalizeBooks(data.docs)
+
+    if (minRating) {
+      results = results.filter(
+        (book) => book.averageRating !== null && book.averageRating >= Number(minRating),
+      )
+    }
+
+    if (languageCode) {
+      results = await localizeBooks(results, languageCode, requestController.signal)
+    }
 
     if (randomize) {
       for (let index = results.length - 1; index > 0; index -= 1) {
@@ -69,7 +133,7 @@ async function loadBooks(searchTerm, limit, randomize = false) {
       }
     }
 
-    books.value = randomize ? results.slice(0, 20) : results
+    books.value = randomize ? results.slice(0, 20) : results.slice(0, 12)
   } catch (error) {
     if (error.name !== 'AbortError') {
       errorMessage.value =
@@ -81,16 +145,94 @@ async function loadBooks(searchTerm, limit, randomize = false) {
 }
 
 function loadFeaturedBooks() {
-  return loadBooks('subject:fiction', 100, true)
+  const shelfSubjects = store.getters.library.flatMap((book) =>
+    Array.isArray(book.subjects)
+      ? book.subjects.filter((subject) => typeof subject === 'string' && subject.trim())
+      : [],
+  )
+
+  if (!shelfSubjects.length) return loadBooks('subject:fiction', 100, true)
+
+  activeRequest?.abort()
+  const requestController = new AbortController()
+  activeRequest = requestController
+  loading.value = true
+  errorMessage.value = ''
+
+  const selectedSubjects = Array.from({ length: 20 }, () =>
+    shelfSubjects[Math.floor(Math.random() * shelfSubjects.length)],
+  )
+  const uniqueSubjects = [...new Set(selectedSubjects)]
+
+  return Promise.all(
+    uniqueSubjects.map(async (subject) => {
+      const params = new URLSearchParams({
+        q: `subject:${subject}`,
+        limit: '100',
+        fields: 'key,title,author_name,first_publish_year,cover_i,subject,ratings_average',
+      })
+      const response = await fetch(`https://openlibrary.org/search.json?${params}`, {
+        signal: requestController.signal,
+      })
+
+      if (!response.ok) {
+        throw new Error(`Open Library returned ${response.status}. Please try again.`)
+      }
+
+      const data = await response.json()
+      const results = normalizeBooks(data.docs)
+      for (let index = results.length - 1; index > 0; index -= 1) {
+        const randomIndex = Math.floor(Math.random() * (index + 1))
+        const book = results[index]
+        results[index] = results[randomIndex]
+        results[randomIndex] = book
+      }
+
+      return [subject, results]
+    }),
+  )
+    .then((subjectResults) => {
+      const booksBySubject = new Map(subjectResults)
+      const usedBookIds = new Set()
+
+      books.value = selectedSubjects.flatMap((subject) => {
+        const book = booksBySubject
+          .get(subject)
+          .find((candidate) => !usedBookIds.has(candidate.id))
+
+        if (!book) return []
+        usedBookIds.add(book.id)
+        return [book]
+      })
+    })
+    .catch((error) => {
+      if (error.name !== 'AbortError') {
+        errorMessage.value =
+          error instanceof Error ? error.message : 'Something went wrong while searching.'
+      }
+    })
+    .finally(() => {
+      if (!requestController.signal.aborted) loading.value = false
+    })
 }
 
 function searchBooks(searchTerm = query.value) {
   const normalizedQuery = searchTerm.trim()
-  if (!normalizedQuery) return
+  if (!normalizedQuery && !language.value && !genre.value) return
 
   query.value = normalizedQuery
   searched.value = true
-  return loadBooks(normalizedQuery, 12)
+  const searchParts = [normalizedQuery]
+  if (language.value) searchParts.push(`language:${language.value}`)
+  if (genre.value) searchParts.push(`subject:"${genre.value}"`)
+
+  return loadBooks(
+    searchParts.filter(Boolean).join(' AND '),
+    minimumRating.value ? (language.value ? 30 : 100) : 12,
+    false,
+    language.value,
+    minimumRating.value,
+  )
 }
 
 onMounted(loadFeaturedBooks)
@@ -127,17 +269,67 @@ onBeforeUnmount(() => {
       <button
         class="button button-primary"
         type="submit"
-        :disabled="(searched && loading) || !query.trim()"
+        :disabled="
+          (searched && loading) ||
+          (!query.trim() && !language && !genre && !minimumRating)
+        "
       >
         {{ searched && loading ? 'Searching…' : 'Find a book' }}
       </button>
     </form>
+    <div class="search-filters">
+      <label class="filter-field">
+        <span>Language</span>
+        <select v-model="language" aria-label="Filter by language">
+          <option value="">Any language</option>
+          <option value="eng">English</option>
+          <option value="fre">French</option>
+          <option value="spa">Spanish</option>
+          <option value="ger">German</option>
+          <option value="ita">Italian</option>
+          <option value="por">Portuguese</option>
+          <option value="jpn">Japanese</option>
+          <option value="chi">Chinese</option>
+        </select>
+      </label>
+      <label class="filter-field">
+        <span>Genre</span>
+        <select v-model="genre" aria-label="Filter by genre">
+          <option value="">Any genre</option>
+          <option value="fiction">Fiction</option>
+          <option value="fantasy">Fantasy</option>
+          <option value="science fiction">Science fiction</option>
+          <option value="mystery">Mystery</option>
+          <option value="romance">Romance</option>
+          <option value="thriller">Thriller</option>
+          <option value="horror">Horror</option>
+          <option value="history">History</option>
+          <option value="biography">Biography</option>
+          <option value="poetry">Poetry</option>
+        </select>
+      </label>
+      <label class="filter-field">
+        <span>Minimum rating</span>
+        <select v-model="minimumRating" aria-label="Filter by minimum average rating">
+          <option value="">Any rating</option>
+          <option value="3">3+ stars</option>
+          <option value="4">4+ stars</option>
+          <option value="4.5">4.5+ stars</option>
+        </select>
+      </label>
+      <label class="filter-field read-filter">
+        <input v-model="hideReadBooks" type="checkbox" />
+        <span>Hide books marked as read</span>
+      </label>
+    </div>
 
     <div class="section-heading results-heading">
       <div>
         <h1>{{ searched ? 'Search results' : 'On the shelves' }}</h1>
       </div>
-      <span v-if="books.length" class="results-count">{{ books.length }} {{ books.length === 1 ? 'book' : 'books' }}</span>
+      <span v-if="booksWithStatus.length" class="results-count">
+        {{ booksWithStatus.length }} {{ booksWithStatus.length === 1 ? 'book' : 'books' }}
+      </span>
     </div>
 
     <div v-if="errorMessage" class="state-message error-message" role="alert">
@@ -150,7 +342,7 @@ onBeforeUnmount(() => {
       >Try again</button>
     </div>
     <div v-else-if="loading" class="state-message">Looking through the shelves…</div>
-    <div v-else-if="books.length" class="book-grid">
+    <div v-else-if="booksWithStatus.length" class="book-grid">
       <BookCard
         v-for="book in booksWithStatus"
         :key="book.id"
@@ -160,8 +352,11 @@ onBeforeUnmount(() => {
         @add="addBook"
       />
     </div>
+    <div v-else-if="books.length && hideReadBooks" class="state-message">
+      No unread books in these results.
+    </div>
     <div v-else-if="searched" class="state-message">
-      No books found for “{{ query }}”. Try another title, author, or keyword.
+      No books found for{{ query ? ` “${query}”` : ' these filters' }}. Try different search criteria.
     </div>
     <div v-else class="welcome-state">
       <div class="welcome-icon" aria-hidden="true">✳</div>

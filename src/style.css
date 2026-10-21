@@ -26,7 +26,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -37,7 +38,8 @@ a {
 
 button:focus-visible,
 a:focus-visible,
-input:focus-visible {
+input:focus-visible,
+select:focus-visible {
   outline: 2px solid #748d73;
   outline-offset: 3px;
 }
@@ -91,6 +93,30 @@ button {
   display: flex;
   align-items: center;
   gap: 27px;
+}
+
+.topbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.theme-toggle {
+  min-height: 28px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.theme-toggle span {
+  font-size: 14px;
+  line-height: 1;
 }
 
 .main-nav a {
@@ -183,6 +209,77 @@ main {
 
 .search-form input::placeholder {
   color: #8f8d82;
+}
+
+.search-filters {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shelf-filters {
+  margin-top: 20px;
+  margin-bottom: 18px;
+}
+
+.filter-field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #777d6c;
+  font-size: 9px;
+}
+
+.filter-field select {
+  min-height: 29px;
+  padding: 0 24px 0 8px;
+  border: 1px solid #c9c7b9;
+  border-radius: 1px;
+  background: #faf8f0;
+  color: var(--ink);
+  font-size: 9px;
+}
+
+.shelf-search-field input {
+  width: min(260px, 100%);
+  min-height: 29px;
+  padding: 0 8px;
+  border: 1px solid #c9c7b9;
+  border-radius: 1px;
+  background: #faf8f0;
+  color: var(--ink);
+  font-size: 9px;
+}
+
+.shelf-search-field input::placeholder {
+  color: #8f8d82;
+}
+
+.load-more-wrap {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.load-more-button {
+  min-height: 32px;
+  border-color: #b8c0ad;
+  background: transparent;
+  color: var(--green);
+}
+
+.load-more-button:hover {
+  background: var(--paper-deep);
+}
+
+.read-filter {
+  cursor: pointer;
+}
+
+.read-filter input {
+  margin: 0;
+  accent-color: var(--green);
 }
 
 .button {
@@ -758,6 +855,10 @@ main {
     gap: 14px;
   }
 
+  .topbar-controls {
+    gap: 10px;
+  }
+
   .main-nav a {
     font-size: 9px;
   }
@@ -786,18 +887,31 @@ main {
     justify-content: space-between;
   }
 
-  .brand {
-    font-size: 13px;
-  }
-
-  .main-nav {
+  .topbar-controls {
     width: 100%;
     min-height: 34px;
     justify-content: space-between;
     gap: 8px;
   }
 
+  .brand {
+    font-size: 13px;
+  }
+
+  .main-nav {
+    min-width: 0;
+    min-height: 34px;
+    flex: 1;
+    gap: 8px;
+  }
+
   .main-nav a {
+    font-size: 8px;
+  }
+
+  .theme-toggle {
+    min-height: 26px;
+    padding: 0 6px;
     font-size: 8px;
   }
 
@@ -813,6 +927,33 @@ main {
   .search-form .button {
     padding: 0 8px;
     font-size: 8px;
+  }
+
+  .search-filters {
+    gap: 7px;
+  }
+
+  .filter-field {
+    flex: 1;
+    justify-content: space-between;
+  }
+
+  .filter-field select {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .shelf-search-field {
+    flex-basis: 100%;
+  }
+
+  .shelf-search-field input {
+    width: 100%;
+  }
+
+  .read-filter {
+    flex: 0 0 auto;
+    justify-content: flex-start;
   }
 
   .book-grid {
@@ -877,6 +1018,152 @@ main {
   text-decoration: underline;
   text-decoration-color: #aab29e;
   text-underline-offset: 3px;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  color: #e8e7dc;
+  background: #171a16;
+  --paper: #171a16;
+  --paper-deep: #222720;
+  --ink: #e8e7dc;
+  --muted: #aaa99e;
+  --green: #a5c1a3;
+  --line: #3a4037;
+}
+
+:root[data-theme='dark'] body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+:root[data-theme='dark'] .topbar,
+:root[data-theme='dark'] .site-footer {
+  background: var(--paper);
+}
+
+:root[data-theme='dark'] .brand,
+:root[data-theme='dark'] .section-heading h1,
+:root[data-theme='dark'] .section-heading h2,
+:root[data-theme='dark'] .collection-intro h1,
+:root[data-theme='dark'] .book-info h3,
+:root[data-theme='dark'] .welcome-state p,
+:root[data-theme='dark'] .empty-state h2,
+:root[data-theme='dark'] .login-card h1,
+:root[data-theme='dark'] .review-details h1 {
+  color: #e8e7dc;
+}
+
+:root[data-theme='dark'] .main-nav a,
+:root[data-theme='dark'] .account-label,
+:root[data-theme='dark'] .logout-button,
+:root[data-theme='dark'] .search-icon,
+:root[data-theme='dark'] .filter-field,
+:root[data-theme='dark'] .eyebrow,
+:root[data-theme='dark'] .results-count,
+:root[data-theme='dark'] .book-year,
+:root[data-theme='dark'] .book-author,
+:root[data-theme='dark'] .personal-label,
+:root[data-theme='dark'] .clear-rating,
+:root[data-theme='dark'] .note-footer,
+:root[data-theme='dark'] .remove-button,
+:root[data-theme='dark'] .text-button,
+:root[data-theme='dark'] .welcome-state,
+:root[data-theme='dark'] .state-message,
+:root[data-theme='dark'] .collection-intro > p:last-child,
+:root[data-theme='dark'] .collection-summary span,
+:root[data-theme='dark'] .summary-decoration,
+:root[data-theme='dark'] .empty-state p,
+:root[data-theme='dark'] .site-footer,
+:root[data-theme='dark'] .footer-brand,
+:root[data-theme='dark'] .login-form label,
+:root[data-theme='dark'] .login-switch,
+:root[data-theme='dark'] .review-author,
+:root[data-theme='dark'] .review-year,
+:root[data-theme='dark'] .community-rating-label,
+:root[data-theme='dark'] .community-rating-count,
+:root[data-theme='dark'] .review-empty {
+  color: #b5b5a9;
+}
+
+:root[data-theme='dark'] .search-form,
+:root[data-theme='dark'] .filter-field select,
+:root[data-theme='dark'] .shelf-search-field input,
+:root[data-theme='dark'] .book-note,
+:root[data-theme='dark'] .login-form input {
+  border-color: #454b41;
+  background: #222720;
+  color: var(--ink);
+}
+
+:root[data-theme='dark'] .search-form input::placeholder,
+:root[data-theme='dark'] .book-note::placeholder {
+  color: #999b8f;
+}
+
+:root[data-theme='dark'] .button-primary,
+:root[data-theme='dark'] .toast-message {
+  border-color: #52745a;
+  background: #355c43;
+  color: #f5f4e9;
+}
+
+:root[data-theme='dark'] .button-primary:hover:not(:disabled) {
+  background: #426c50;
+}
+
+:root[data-theme='dark'] .theme-toggle,
+:root[data-theme='dark'] .empty-icon,
+:root[data-theme='dark'] .collection-summary,
+:root[data-theme='dark'] .demo-credentials,
+:root[data-theme='dark'] .favorite-button {
+  border-color: var(--line);
+  background: #222720;
+  color: #d1d4c5;
+}
+
+:root[data-theme='dark'] .button-note,
+:root[data-theme='dark'] .button-add,
+:root[data-theme='dark'] .button-read,
+:root[data-theme='dark'] .load-more-button {
+  border-color: #596654;
+  color: #b7c9ae;
+}
+
+:root[data-theme='dark'] .button-add:hover:not(:disabled),
+:root[data-theme='dark'] .button-read.is-read,
+:root[data-theme='dark'] .load-more-button:hover {
+  background: #303a30;
+}
+
+:root[data-theme='dark'] .collection-summary strong,
+:root[data-theme='dark'] .community-rating-value,
+:root[data-theme='dark'] .demo-credentials strong,
+:root[data-theme='dark'] .login-switch button,
+:root[data-theme='dark'] .guest-link,
+:root[data-theme='dark'] .back-link {
+  color: #a5c1a3;
+}
+
+:root[data-theme='dark'] .welcome-state,
+:root[data-theme='dark'] .state-message,
+:root[data-theme='dark'] .empty-state {
+  border-color: #454b41;
+}
+
+:root[data-theme='dark'] .error-message {
+  border-color: #80584c;
+  color: #e0a995;
+}
+
+:root[data-theme='dark'] .login-message,
+:root[data-theme='dark'] .review-remove {
+  color: #d5a797;
+}
+
+:root[data-theme='dark'] .review-cover,
+:root[data-theme='dark'] .book-cover {
+  border-color: #454b41;
 }
 
 .login-page {
@@ -1052,6 +1339,29 @@ main {
   margin: 5px 0 0;
   color: #939084;
   font-size: 8px;
+}
+
+.community-rating {
+  margin-top: 15px;
+  display: grid;
+  gap: 5px;
+}
+
+.community-rating-label {
+  color: #79796f;
+  font-size: 9px;
+}
+
+.community-rating-value {
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.community-rating-count {
+  color: #88877c;
+  font-size: 9px;
+  font-weight: 400;
 }
 
 .review-primary {

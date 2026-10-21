@@ -1,6 +1,8 @@
 <script setup>
 import { ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
 const props = defineProps({
   book: { type: Object, required: true },
   inLibrary: { type: Boolean, default: false },
@@ -27,6 +29,7 @@ const bookRoute = () => ({
     author: props.book.author,
     year: props.book.year,
     cover: props.book.cover,
+    returnTo: route.path,
   },
 })
 
