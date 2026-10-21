@@ -51,15 +51,17 @@ function toggleTheme() {
         <span>Campers</span>
       </RouterLink>
 
+      <span v-if="isAuthenticated" class="account-label">{{ username }}</span>
+
       <div class="topbar-controls">
         <nav v-if="!['login', 'review'].includes(route.name)" class="main-nav" aria-label="Main navigation">
           <RouterLink to="/" :class="{ active: route.name === 'search' }">Discover books</RouterLink>
+          <RouterLink to="/random" :class="{ active: route.name === 'random' }">Random book</RouterLink>
           <RouterLink v-if="isAuthenticated" to="/library" :class="{ active: route.name === 'library' }">
             My shelves
           </RouterLink>
           <RouterLink v-if="isAuthenticated" to="/favorites" :class="{ active: route.name === 'favorites' }">Favorites</RouterLink>
           <RouterLink v-if="!isAuthenticated" to="/login" :class="{ active: route.name === 'login' }">Log in</RouterLink>
-          <span v-if="isAuthenticated" class="account-label">{{ username }}</span>
           <button v-if="isAuthenticated" class="logout-button" type="button" @click="logout">Log out</button>
         </nav>
         <button

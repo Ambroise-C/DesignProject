@@ -7,7 +7,9 @@ The interface is inspired by the provided Figma design, with a paper-like backgr
 ## Features
 
 - Search for books by title, author, or keyword.
-- Filter search results by language, genre, and minimum average rating, or hide books already marked as read.
+- Refresh search results and load additional results.
+- Discover a book chosen at random on the Random book page.
+- Filter search results by language, genre, and minimum average rating, or hide books already in the library.
 - View book covers, titles, authors, and publication years.
 - View book details, including the average community rating when available.
 - Discover books based on authors and related subjects, excluding the book currently being viewed.
@@ -46,6 +48,7 @@ src/
 │   └── index.js           # Vuex state, accounts, and local persistence
 ├── views/
 │   ├── SearchView.vue     # Open Library search and book discovery
+│   ├── RandomBookView.vue # Random book discovery
 │   ├── ReviewView.vue     # Book details
 │   ├── LoginView.vue      # Sign-in and account creation
 │   ├── LibraryView.vue    # Personal library

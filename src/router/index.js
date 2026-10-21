@@ -4,12 +4,14 @@ import LibraryView from '../views/LibraryView.vue'
 import FavoritesView from '../views/FavoritesView.vue'
 import LoginView from '../views/LoginView.vue'
 import ReviewView from '../views/ReviewView.vue'
+import RandomBookView from '../views/RandomBookView.vue'
 import store from '../store'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'search', component: SearchView },
+    { path: '/random', name: 'random', component: RandomBookView },
     { path: '/library', name: 'library', component: LibraryView, meta: { requiresAuth: true } },
     { path: '/favorites', name: 'favorites', component: FavoritesView, meta: { requiresAuth: true } },
     { path: '/login', name: 'login', component: LoginView },

@@ -146,6 +146,9 @@ button {
 }
 
 .account-label {
+  position: absolute;
+  top: 5px;
+  right: max(5vw, calc((100vw - 1320px) / 2));
   color: #64705f;
   font-size: 9px;
 }
@@ -176,6 +179,16 @@ main {
 
 .discover-page {
   padding: 32px 0 74px;
+}
+
+.random-book-page {
+  min-height: 65vh;
+  padding: 32px 0 74px;
+}
+
+.random-book-card {
+  width: min(100%, 260px);
+  margin: 30px auto 0;
 }
 
 .search-form {
@@ -346,6 +359,24 @@ main {
   padding-bottom: 3px;
   color: #8d8b80;
   font-size: 9px;
+}
+
+.results-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.refresh-button {
+  min-height: 26px;
+  padding: 0 9px;
+  border-color: #b8c0ad;
+  background: transparent;
+  color: var(--green);
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: var(--paper-deep);
 }
 
 .book-grid {
@@ -851,6 +882,10 @@ main {
     padding: 0 19px;
   }
 
+  .account-label {
+    right: 19px;
+  }
+
   .main-nav {
     gap: 14px;
   }
@@ -887,6 +922,11 @@ main {
     justify-content: space-between;
   }
 
+  .account-label {
+    top: 12px;
+    right: 19px;
+  }
+
   .topbar-controls {
     width: 100%;
     min-height: 34px;
@@ -907,6 +947,10 @@ main {
 
   .main-nav a {
     font-size: 8px;
+  }
+
+  .main-nav {
+    gap: 6px;
   }
 
   .theme-toggle {
@@ -1125,14 +1169,16 @@ main {
 :root[data-theme='dark'] .button-note,
 :root[data-theme='dark'] .button-add,
 :root[data-theme='dark'] .button-read,
-:root[data-theme='dark'] .load-more-button {
+:root[data-theme='dark'] .load-more-button,
+:root[data-theme='dark'] .refresh-button {
   border-color: #596654;
   color: #b7c9ae;
 }
 
 :root[data-theme='dark'] .button-add:hover:not(:disabled),
 :root[data-theme='dark'] .button-read.is-read,
-:root[data-theme='dark'] .load-more-button:hover {
+:root[data-theme='dark'] .load-more-button:hover,
+:root[data-theme='dark'] .refresh-button:hover:not(:disabled) {
   background: #303a30;
 }
 

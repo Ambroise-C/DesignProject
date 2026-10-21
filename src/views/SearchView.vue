@@ -9,10 +9,13 @@ const query = ref('')
 const language = ref('')
 const genre = ref('')
 const minimumRating = ref('')
-const hideReadBooks = ref(false)
+const hideLibraryBooks = ref(true)
 const books = ref([])
 const loading = ref(false)
+const loadingMore = ref(false)
 const searched = ref(false)
+const hasMore = ref(false)
+const searchPage = ref(1)
 const errorMessage = ref('')
 const notice = ref('')
 let activeRequest
@@ -72,12 +75,11 @@ async function localizeBooks(results, languageCode, signal) {
 }
 
 const booksWithStatus = computed(() => {
-  const readBookIds = new Set(
-    store.getters.library.filter((book) => book.read).map((book) => book.id),
-  )
+  const libraryBooks = store.getters.library
+  const libraryBookIds = new Set(libraryBooks.map((book) => book.id))
 
   return books.value
-    .filter((book) => !hideReadBooks.value || !readBookIds.has(book.id))
+    .filter((book) => !hideLibraryBooks.value || !libraryBookIds.has(book.id))
     .map((book) => ({
       ...book,
       inLibrary: store.getters.isInLibrary(book.id),
@@ -90,17 +92,21 @@ async function loadBooks(
   randomize = false,
   languageCode = '',
   minRating = '',
+  page = 1,
+  append = false,
 ) {
   activeRequest?.abort()
   const requestController = new AbortController()
   activeRequest = requestController
-  loading.value = true
+  loading.value = !append
+  loadingMore.value = append
   errorMessage.value = ''
 
   try {
     const params = new URLSearchParams({
       q: searchTerm,
       limit: String(limit),
+      page: String(page),
       fields: 'key,title,author_name,first_publish_year,cover_i,subject,ratings_average',
     })
     const response = await fetch(`https://openlibrary.org/search.json?${params}`, {
@@ -133,14 +139,29 @@ async function loadBooks(
       }
     }
 
-    books.value = randomize ? results.slice(0, 20) : results.slice(0, 12)
+    if (append) {
+      const existingIds = new Set(books.value.map((book) => book.id))
+      books.value = [
+        ...books.value,
+        ...results.filter((book) => !existingIds.has(book.id)),
+      ]
+    } else {
+      books.value = randomize ? results.slice(0, 20) : results
+    }
+    if (!randomize) {
+      searchPage.value = page
+      hasMore.value = page * limit < (data.numFound || 0)
+    }
   } catch (error) {
     if (error.name !== 'AbortError') {
       errorMessage.value =
         error instanceof Error ? error.message : 'Something went wrong while searching.'
     }
   } finally {
-    if (!requestController.signal.aborted) loading.value = false
+    if (!requestController.signal.aborted) {
+      loading.value = false
+      loadingMore.value = false
+    }
   }
 }
 
@@ -218,7 +239,7 @@ function loadFeaturedBooks() {
 
 function searchBooks(searchTerm = query.value) {
   const normalizedQuery = searchTerm.trim()
-  if (!normalizedQuery && !language.value && !genre.value) return
+  if (!normalizedQuery && !language.value && !genre.value && !minimumRating.value) return
 
   query.value = normalizedQuery
   searched.value = true
@@ -228,10 +249,28 @@ function searchBooks(searchTerm = query.value) {
 
   return loadBooks(
     searchParts.filter(Boolean).join(' AND '),
-    minimumRating.value ? (language.value ? 30 : 100) : 12,
+    12,
     false,
     language.value,
     minimumRating.value,
+  )
+}
+
+function loadMoreBooks() {
+  if (!hasMore.value || loading.value || loadingMore.value) return
+
+  const searchParts = [query.value.trim()]
+  if (language.value) searchParts.push(`language:${language.value}`)
+  if (genre.value) searchParts.push(`subject:"${genre.value}"`)
+
+  return loadBooks(
+    searchParts.filter(Boolean).join(' AND '),
+    12,
+    false,
+    language.value,
+    minimumRating.value,
+    searchPage.value + 1,
+    true,
   )
 }
 
@@ -318,8 +357,8 @@ onBeforeUnmount(() => {
         </select>
       </label>
       <label class="filter-field read-filter">
-        <input v-model="hideReadBooks" type="checkbox" />
-        <span>Hide books marked as read</span>
+        <input v-model="hideLibraryBooks" type="checkbox" />
+        <span>Hide books already in my library</span>
       </label>
     </div>
 
@@ -327,9 +366,19 @@ onBeforeUnmount(() => {
       <div>
         <h1>{{ searched ? 'Search results' : 'On the shelves' }}</h1>
       </div>
-      <span v-if="booksWithStatus.length" class="results-count">
-        {{ booksWithStatus.length }} {{ booksWithStatus.length === 1 ? 'book' : 'books' }}
-      </span>
+      <div class="results-actions">
+        <span v-if="booksWithStatus.length" class="results-count">
+          {{ booksWithStatus.length }} {{ booksWithStatus.length === 1 ? 'book' : 'books' }}
+        </span>
+        <button
+          class="button refresh-button"
+          type="button"
+          :disabled="loading || loadingMore"
+          @click="searched ? searchBooks() : loadFeaturedBooks()"
+        >
+          {{ loading && !loadingMore ? 'Refreshing…' : 'Refresh' }}
+        </button>
+      </div>
     </div>
 
     <div v-if="errorMessage" class="state-message error-message" role="alert">
@@ -341,7 +390,7 @@ onBeforeUnmount(() => {
         @click="searched ? searchBooks() : loadFeaturedBooks()"
       >Try again</button>
     </div>
-    <div v-else-if="loading" class="state-message">Looking through the shelves…</div>
+    <div v-else-if="loading && !loadingMore" class="state-message">Looking through the shelves…</div>
     <div v-else-if="booksWithStatus.length" class="book-grid">
       <BookCard
         v-for="book in booksWithStatus"
@@ -352,16 +401,33 @@ onBeforeUnmount(() => {
         @add="addBook"
       />
     </div>
-    <div v-else-if="books.length && hideReadBooks" class="state-message">
-      No unread books in these results.
+    <div
+      v-if="searched && !loading && !loadingMore && !errorMessage && !booksWithStatus.length"
+      class="state-message"
+    >
+      {{
+        books.length && hideLibraryBooks
+          ? 'No books match this filter. Try turning it off.'
+          : `No books found for${query ? ` “${query}”` : ' these filters'}. Try different search criteria.`
+      }}
     </div>
-    <div v-else-if="searched" class="state-message">
-      No books found for{{ query ? ` “${query}”` : ' these filters' }}. Try different search criteria.
-    </div>
-    <div v-else class="welcome-state">
+    <div
+      v-if="!searched && !loading && !errorMessage && !booksWithStatus.length"
+      class="welcome-state"
+    >
       <div class="welcome-icon" aria-hidden="true">✳</div>
       <p>Find a book to begin.</p>
       <span>Search by title, author, or a phrase you can’t quite forget.</span>
+    </div>
+    <div v-if="searched && hasMore" class="load-more-wrap">
+      <button
+        class="button load-more-button"
+        type="button"
+        :disabled="loadingMore || loading"
+        @click="loadMoreBooks"
+      >
+        {{ loadingMore ? 'Loading…' : 'Load more' }}
+      </button>
     </div>
 
     <Transition name="toast">

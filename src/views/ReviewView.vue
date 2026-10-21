@@ -33,11 +33,12 @@ const inLibrary = computed(() => book.value && store.getters.isInLibrary(book.va
 const isAuthenticated = computed(() => store.getters.isAuthenticated)
 const returnTo = computed(() => {
   const requestedPath = route.query.returnTo
-  return requestedPath === '/library' || requestedPath === '/favorites' ? requestedPath : '/'
+  return ['/library', '/favorites', '/random'].includes(requestedPath) ? requestedPath : '/'
 })
 const backLabel = computed(() => {
   if (returnTo.value === '/library') return 'Back to my shelves'
   if (returnTo.value === '/favorites') return 'Back to favorites'
+  if (returnTo.value === '/random') return 'Back to random book'
   return 'Back to discovery'
 })
 const personalRating = computed(() =>
