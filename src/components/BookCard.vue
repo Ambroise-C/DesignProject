@@ -131,14 +131,20 @@ watch(
       </div>
 
       <button
-        v-if="!actions && canAdd"
+        v-if="!actions"
         class="button button-add"
         type="button"
-        :disabled="inLibrary"
+        :disabled="canAdd && inLibrary"
         @click="emit('add', book)"
       >
-        <span>{{ inLibrary ? '✓' : '+' }}</span>
-        {{ inLibrary ? 'In your library' : 'Add to library' }}
+        <span>{{ canAdd && inLibrary ? '✓' : '+' }}</span>
+        {{
+          canAdd
+            ? inLibrary
+              ? 'In your library'
+              : 'Add to library'
+            : 'Log in to add'
+        }}
       </button>
       <div v-else-if="actions" class="card-actions">
         <button

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
+import { takePendingBookAdd } from '../utils/pendingBookAdd'
 
 const route = useRoute()
 const router = useRouter()
@@ -17,6 +18,21 @@ async function submitLogin() {
   try {
     const credentials = { username: username.value, password: password.value }
     await store.dispatch(isRegistering.value ? 'register' : 'login', credentials)
+    let pendingBook
+    try {
+      pendingBook = takePendingBookAdd()
+    } catch (error) {
+      message.value =
+        error instanceof Error ? error.message : 'Unable to restore the book you wanted to add.'
+      return
+    }
+
+    if (pendingBook) {
+      await store.dispatch('addBook', pendingBook)
+      await router.replace('/library')
+      return
+    }
+
     const destination =
       typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
         ? route.query.redirect

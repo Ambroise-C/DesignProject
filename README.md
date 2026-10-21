@@ -7,7 +7,7 @@ The interface is inspired by the provided Figma design, with a paper-like backgr
 ## Features
 
 - Search for books by title, author, or keyword.
-- Refresh search results and load additional results.
+- Refresh search results and load additional results. Featured suggestions appear 20 at a time; after five refreshes, a new batch of up to 100 books is fetched. Default suggestions exclude books tagged with explicit sexual content.
 - Pick a random unread book from your personal library on the Random book page.
 - Filter search results by language, genre, and minimum average rating, or hide books already in the library.
 - View book covers, titles, authors, and publication years.
@@ -15,6 +15,7 @@ The interface is inspired by the provided Figma design, with a paper-like backgr
 - Discover books based on authors and related subjects, excluding the book currently being viewed.
 - Create an account and sign in locally.
 - Add books to and remove books from a personal library.
+- Prompt guests to sign in when adding a book, then finish adding it after authentication.
 - Mark books as read or unread, and filter the library by reading status.
 - Search the personal library, sort books by title, year, or date added, and load more results.
 - Rate books and add personal notes.

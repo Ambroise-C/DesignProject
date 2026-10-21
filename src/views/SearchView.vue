@@ -1,9 +1,12 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import BookCard from '../components/BookCard.vue'
+import { savePendingBookAdd } from '../utils/pendingBookAdd'
 
 const store = useStore()
+const router = useRouter()
 const isAuthenticated = computed(() => store.getters.isAuthenticated)
 const query = ref('')
 const language = ref('')
@@ -16,8 +19,13 @@ const loadingMore = ref(false)
 const searched = ref(false)
 const hasMore = ref(false)
 const searchPage = ref(1)
+const featuredVisibleCount = ref(20)
 const errorMessage = ref('')
 const notice = ref('')
+const featuredSeenIds = new Set()
+const featuredBatchSize = 100
+const featuredDisplaySize = 20
+let featuredRefreshCount = 0
 let activeRequest
 let noticeTimer
 
@@ -35,6 +43,16 @@ function normalizeBooks(docs) {
         : '',
       subjects: Array.isArray(book.subject) ? book.subject.slice(0, 12) : [],
     }))
+}
+
+const explicitContentPattern =
+  /\b(?:erotica|erotic|pornography|pornographic|sexually explicit|sexual content|sexual intercourse|sexual behavior|sex manuals?|sex stories|sex fiction)\b/i
+
+function hasExplicitContent(book) {
+  return (
+    explicitContentPattern.test(book.title || '') ||
+    (Array.isArray(book.subject) && book.subject.some((subject) => explicitContentPattern.test(subject)))
+  )
 }
 
 async function localizeBooks(results, languageCode, signal) {
@@ -78,7 +96,11 @@ const booksWithStatus = computed(() => {
   const libraryBooks = store.getters.library
   const libraryBookIds = new Set(libraryBooks.map((book) => book.id))
 
-  return books.value
+  const visibleBooks = searched.value
+    ? books.value
+    : books.value.slice(0, featuredVisibleCount.value)
+
+  return visibleBooks
     .filter((book) => !hideLibraryBooks.value || !libraryBookIds.has(book.id))
     .map((book) => ({
       ...book,
@@ -165,76 +187,161 @@ async function loadBooks(
   }
 }
 
-function loadFeaturedBooks() {
+async function fetchSubjectBooks(subject, signal, page = 1) {
+  const params = new URLSearchParams({
+    q: `subject:${subject}`,
+    sort: 'random',
+    limit: '100',
+    page: String(page),
+    fields: 'key,title,author_name,first_publish_year,cover_i,subject,ratings_average',
+  })
+  const response = await fetch(`https://openlibrary.org/search.json?${params}`, { signal })
+
+  if (!response.ok) {
+    throw new Error(`Open Library returned ${response.status}. Please try again.`)
+  }
+
+  const data = await response.json()
+  const results = normalizeBooks(
+    (Array.isArray(data.docs) ? data.docs : []).filter((book) => !hasExplicitContent(book)),
+  )
+  for (let index = results.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1))
+    const book = results[index]
+    results[index] = results[randomIndex]
+    results[randomIndex] = book
+  }
+  return results
+}
+
+async function loadFeaturedBooks(append = false) {
   const shelfSubjects = store.getters.library.flatMap((book) =>
     Array.isArray(book.subjects)
       ? book.subjects.filter((subject) => typeof subject === 'string' && subject.trim())
       : [],
   )
-
-  if (!shelfSubjects.length) return loadBooks('subject:fiction', 100, true)
-
   activeRequest?.abort()
   const requestController = new AbortController()
   activeRequest = requestController
-  loading.value = true
+  loading.value = !append
+  loadingMore.value = append
   errorMessage.value = ''
+  try {
+    const libraryIds = new Set(store.getters.library.map((book) => book.id))
+    const existingIds = new Set(books.value.map((book) => book.id))
+    const newBooks = []
 
-  const selectedSubjects = Array.from({ length: 20 }, () =>
-    shelfSubjects[Math.floor(Math.random() * shelfSubjects.length)],
-  )
-  const uniqueSubjects = [...new Set(selectedSubjects)]
-
-  return Promise.all(
-    uniqueSubjects.map(async (subject) => {
-      const params = new URLSearchParams({
-        q: `subject:${subject}`,
-        limit: '100',
-        fields: 'key,title,author_name,first_publish_year,cover_i,subject,ratings_average',
-      })
-      const response = await fetch(`https://openlibrary.org/search.json?${params}`, {
-        signal: requestController.signal,
-      })
-
-      if (!response.ok) {
-        throw new Error(`Open Library returned ${response.status}. Please try again.`)
+    if (!shelfSubjects.length) {
+      const batchIds = new Set(existingIds)
+      for (let page = 1; page <= 5 && newBooks.length < featuredBatchSize; page += 1) {
+        const results = await fetchSubjectBooks('fiction', requestController.signal, page)
+        for (const book of results) {
+          if (
+            !book.cover ||
+            featuredSeenIds.has(book.id) ||
+            batchIds.has(book.id) ||
+            (hideLibraryBooks.value && libraryIds.has(book.id))
+          ) {
+            continue
+          }
+          batchIds.add(book.id)
+          newBooks.push(book)
+          if (newBooks.length === featuredBatchSize) break
+        }
       }
-
-      const data = await response.json()
-      const results = normalizeBooks(data.docs)
-      for (let index = results.length - 1; index > 0; index -= 1) {
-        const randomIndex = Math.floor(Math.random() * (index + 1))
-        const book = results[index]
-        results[index] = results[randomIndex]
-        results[randomIndex] = book
-      }
-
-      return [subject, results]
-    }),
-  )
-    .then((subjectResults) => {
+    } else {
+      const weightedSubjects = Array.from({ length: featuredDisplaySize }, () =>
+        shelfSubjects[Math.floor(Math.random() * shelfSubjects.length)],
+      )
+      const selectedSubjects = Array.from({ length: featuredBatchSize }, () =>
+        weightedSubjects[Math.floor(Math.random() * weightedSubjects.length)],
+      )
+      const uniqueSubjects = [...new Set(selectedSubjects)]
+      const subjectResults = await Promise.all(
+        uniqueSubjects.map(async (subject) => [
+          subject,
+          await fetchSubjectBooks(subject, requestController.signal),
+        ]),
+      )
       const booksBySubject = new Map(subjectResults)
-      const usedBookIds = new Set()
+      const subjectIndexes = new Map(uniqueSubjects.map((subject) => [subject, 0]))
+      const usedBookIds = new Set(existingIds)
 
-      books.value = selectedSubjects.flatMap((subject) => {
-        const book = booksBySubject
-          .get(subject)
-          .find((candidate) => !usedBookIds.has(candidate.id))
+      for (const subject of selectedSubjects) {
+        const results = booksBySubject.get(subject)
+        let candidateIndex = subjectIndexes.get(subject)
+        while (
+          candidateIndex < results.length &&
+          (!results[candidateIndex].cover ||
+            usedBookIds.has(results[candidateIndex].id) ||
+            featuredSeenIds.has(results[candidateIndex].id) ||
+            (hideLibraryBooks.value && libraryIds.has(results[candidateIndex].id)))
+        ) {
+          candidateIndex += 1
+        }
 
-        if (!book) return []
-        usedBookIds.add(book.id)
-        return [book]
-      })
-    })
-    .catch((error) => {
-      if (error.name !== 'AbortError') {
-        errorMessage.value =
-          error instanceof Error ? error.message : 'Something went wrong while searching.'
+        subjectIndexes.set(subject, candidateIndex + 1)
+        const candidate = results[candidateIndex]
+        if (!candidate) continue
+        usedBookIds.add(candidate.id)
+        newBooks.push(candidate)
       }
-    })
-    .finally(() => {
-      if (!requestController.signal.aborted) loading.value = false
-    })
+    }
+
+    if (!newBooks.length) {
+      throw new Error('No new books were found. Refresh to try again.')
+    }
+
+    if (append) {
+      books.value = [...books.value, ...newBooks]
+    } else {
+      books.value = newBooks
+      featuredVisibleCount.value = featuredDisplaySize
+    }
+    for (const book of books.value.slice(0, featuredVisibleCount.value)) {
+      featuredSeenIds.add(book.id)
+    }
+  } catch (error) {
+    if (error.name !== 'AbortError') {
+      errorMessage.value =
+        error instanceof Error ? error.message : 'Something went wrong while searching.'
+    }
+  } finally {
+    if (!requestController.signal.aborted) {
+      loading.value = false
+      loadingMore.value = false
+    }
+  }
+}
+
+async function refreshFeaturedBooks() {
+  featuredRefreshCount += 1
+  if (featuredRefreshCount < 5 && books.value.length) {
+    const unseenBooks = books.value.filter((book) => !featuredSeenIds.has(book.id))
+    const seenBooks = books.value.filter((book) => featuredSeenIds.has(book.id))
+    const shuffledBooks = [...unseenBooks, ...seenBooks]
+
+    for (let index = shuffledBooks.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(Math.random() * (index + 1))
+      const book = shuffledBooks[index]
+      shuffledBooks[index] = shuffledBooks[randomIndex]
+      shuffledBooks[randomIndex] = book
+    }
+
+    books.value = shuffledBooks
+    featuredVisibleCount.value = Math.min(featuredDisplaySize, books.value.length)
+    for (const book of books.value.slice(0, featuredVisibleCount.value)) {
+      featuredSeenIds.add(book.id)
+    }
+    return
+  }
+
+  await loadFeaturedBooks()
+  if (errorMessage.value) {
+    featuredRefreshCount = 4
+    return
+  }
+  featuredRefreshCount = 0
 }
 
 function searchBooks(searchTerm = query.value) {
@@ -259,6 +366,21 @@ function searchBooks(searchTerm = query.value) {
 function loadMoreBooks() {
   if (!hasMore.value || loading.value || loadingMore.value) return
 
+  if (!searched.value) {
+    if (featuredVisibleCount.value < books.value.length) {
+      const nextCount = Math.min(
+        featuredVisibleCount.value + featuredDisplaySize,
+        books.value.length,
+      )
+      for (const book of books.value.slice(featuredVisibleCount.value, nextCount)) {
+        featuredSeenIds.add(book.id)
+      }
+      featuredVisibleCount.value = nextCount
+      return
+    }
+    return loadFeaturedBooks(true)
+  }
+
   const searchParts = [query.value.trim()]
   if (language.value) searchParts.push(`language:${language.value}`)
   if (genre.value) searchParts.push(`subject:"${genre.value}"`)
@@ -274,10 +396,22 @@ function loadMoreBooks() {
   )
 }
 
-onMounted(loadFeaturedBooks)
+onMounted(() => {
+  hasMore.value = true
+  loadFeaturedBooks()
+})
 
 function addBook(book) {
-  if (!isAuthenticated.value) return
+  if (!isAuthenticated.value) {
+    try {
+      savePendingBookAdd(book)
+      router.push({ name: 'login', query: { redirect: '/' } })
+    } catch (error) {
+      errorMessage.value =
+        error instanceof Error ? error.message : 'Unable to continue with this book.'
+    }
+    return
+  }
 
   store.dispatch('addBook', book)
   notice.value = 'Added to your library'
@@ -374,7 +508,7 @@ onBeforeUnmount(() => {
           class="button refresh-button"
           type="button"
           :disabled="loading || loadingMore"
-          @click="searched ? searchBooks() : loadFeaturedBooks()"
+          @click="searched ? searchBooks() : refreshFeaturedBooks()"
         >
           {{ loading && !loadingMore ? 'Refreshing…' : 'Refresh' }}
         </button>
@@ -419,14 +553,22 @@ onBeforeUnmount(() => {
       <p>Find a book to begin.</p>
       <span>Search by title, author, or a phrase you can’t quite forget.</span>
     </div>
-    <div v-if="searched && hasMore" class="load-more-wrap">
+    <div v-if="searched ? hasMore : books.length > 0" class="load-more-wrap">
       <button
         class="button load-more-button"
         type="button"
         :disabled="loadingMore || loading"
         @click="loadMoreBooks"
       >
-        {{ loadingMore ? 'Loading…' : 'Load more' }}
+        {{
+          loadingMore
+            ? 'Loading…'
+            : !searched && featuredVisibleCount < books.length
+              ? 'Show next 20 books'
+              : !searched
+                ? 'Load 100 new books'
+                : 'Load more'
+        }}
       </button>
     </div>
 

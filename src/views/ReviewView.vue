@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
+import { savePendingBookAdd } from '../utils/pendingBookAdd'
 
 const route = useRoute()
 const router = useRouter()
@@ -10,6 +11,7 @@ const averageRating = ref(null)
 const ratingCount = ref(0)
 const ratingLoading = ref(false)
 const ratingError = ref(false)
+const addError = ref('')
 
 const book = computed(() => {
   const id = typeof route.query.id === 'string' ? route.query.id : ''
@@ -105,7 +107,18 @@ watch(
 )
 
 function addBook() {
-  if (!book.value || !isAuthenticated.value) return
+  if (!book.value) return
+  if (!isAuthenticated.value) {
+    try {
+      savePendingBookAdd(book.value)
+      router.push({ name: 'login', query: { redirect: route.fullPath } })
+    } catch (error) {
+      addError.value =
+        error instanceof Error ? error.message : 'Unable to continue with this book.'
+    }
+    return
+  }
+  addError.value = ''
   store.dispatch('addBook', book.value)
 }
 
@@ -129,6 +142,7 @@ function removeBook() {
         <h1>{{ book.title }}</h1>
         <p class="review-author">{{ book.author || 'Author unknown' }}</p>
         <p v-if="book.year" class="review-year">First published {{ book.year }}</p>
+        <p v-if="addError" class="login-message" role="alert">{{ addError }}</p>
         <div class="community-rating" aria-live="polite">
           <span class="community-rating-label">
             {{ personalRating === null ? 'Average rating' : 'Average rating, including yours' }}
@@ -165,9 +179,14 @@ function removeBook() {
           </button>
           <button class="review-remove" type="button" @click="removeBook">Remove from library</button>
         </template>
-        <RouterLink v-else class="button button-primary review-primary" to="/login">
-          Connectez-vous pour enregistrer ce livre
-        </RouterLink>
+        <button
+          v-else
+          class="button button-primary review-primary"
+          type="button"
+          @click="addBook"
+        >
+          Log in to add this book to your library
+        </button>
       </div>
     </div>
     <div v-else class="review-empty">

@@ -5,6 +5,7 @@ import { useStore } from 'vuex'
 import BookCard from '../components/BookCard.vue'
 
 const store = useStore()
+const isAuthenticated = computed(() => store.getters.isAuthenticated)
 const unreadBooks = computed(() => store.getters.library.filter((book) => !book.read))
 const book = ref(null)
 function loadRandomBook() {
@@ -38,6 +39,8 @@ loadRandomBook()
     <div v-if="book" class="random-book-card">
       <BookCard
         :book="book"
+        :in-library="store.getters.isInLibrary(book.id)"
+        :can-add="isAuthenticated"
       />
     </div>
     <div v-else class="state-message">
