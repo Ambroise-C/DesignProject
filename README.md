@@ -8,7 +8,7 @@ The interface is inspired by the provided Figma design, with a paper-like backgr
 
 - Search for books by title, author, or keyword.
 - Refresh search results and load additional results.
-- Discover a book chosen at random on the Random book page.
+- Pick a random unread book from your personal library on the Random book page.
 - Filter search results by language, genre, and minimum average rating, or hide books already in the library.
 - View book covers, titles, authors, and publication years.
 - View book details, including the average community rating when available.

@@ -145,12 +145,19 @@ button {
   content: '';
 }
 
+.account-separator {
+  color: var(--line);
+  font-size: 12px;
+}
+
 .account-label {
-  position: absolute;
-  top: 5px;
-  right: max(5vw, calc((100vw - 1320px) / 2));
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  background: var(--paper-deep);
   color: #64705f;
   font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .logout-button {
@@ -882,10 +889,6 @@ main {
     padding: 0 19px;
   }
 
-  .account-label {
-    right: 19px;
-  }
-
   .main-nav {
     gap: 14px;
   }
@@ -920,11 +923,6 @@ main {
     flex-direction: column;
     align-items: flex-start;
     justify-content: space-between;
-  }
-
-  .account-label {
-    top: 12px;
-    right: 19px;
   }
 
   .topbar-controls {
